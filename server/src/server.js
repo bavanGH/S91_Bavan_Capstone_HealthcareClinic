@@ -25,7 +25,7 @@ app.get('/api/patients', async (_req, res, next) => {
 
 app.get('/api/patients/:patientId', async (req, res, next) => {
   try {
-    const patient = await Patient.findOne({ patientId: req.params.patientId, isActive: true })
+    const patient = await Patient.findOne({ patientId: req.params.patientId, isActive: true }).populate('treatments')
     if (!patient) {
       return res.status(404).json({ message: 'Patient not found' })
     }

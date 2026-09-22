@@ -53,4 +53,6 @@ const treatmentSchema = new mongoose.Schema(
   },
 )
 
+treatmentSchema.index({ patientId: 1, treatmentDate: -1 })
+
 export default mongoose.model('Treatment', treatmentSchema)
