@@ -66,6 +66,14 @@ patientSchema.virtual('fullName').get(function () {
   return `${this.firstName} ${this.lastName}`
 })
 
+patientSchema.virtual('treatments', {
+  ref: 'Treatment',
+  localField: '_id',
+  foreignField: 'patientId',
+  justOne: false,
+  options: { sort: { treatmentDate: -1 } },
+})
+
 patientSchema.set('toJSON', { virtuals: true })
 patientSchema.set('toObject', { virtuals: true })
 
