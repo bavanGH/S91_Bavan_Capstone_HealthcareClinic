@@ -1,94 +1,28 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 
-const patients = [
-  {
-    id: 'PT-2041',
-    name: 'Ava Thompson',
-    age: 34,
-    sex: 'Female',
-    lastVisit: '15 Aug 2026',
-    status: 'Follow-up',
-    risk: 'Low',
-    doctor: 'Dr. Patel',
-    condition: 'Seasonal allergy management',
-    nextAction: 'Review medication response',
-  },
-  {
-    id: 'PT-1887',
-    name: 'Lucas Ramirez',
-    age: 41,
-    sex: 'Male',
-    lastVisit: '11 Aug 2026',
-    status: 'Monitoring',
-    risk: 'Moderate',
-    doctor: 'Dr. Chen',
-    condition: 'Post-op recovery',
-    nextAction: 'Repeat blood panel',
-  },
-  {
-    id: 'PT-3094',
-    name: 'Sophia Lee',
-    age: 28,
-    sex: 'Female',
-    lastVisit: '09 Aug 2026',
-    status: 'Stable',
-    risk: 'Low',
-    doctor: 'Dr. Gomez',
-    condition: 'Migraine prevention',
-    nextAction: 'Confirm therapy adherence',
-  },
-  {
-    id: 'PT-9912',
-    name: 'Noah Brooks',
-    age: 52,
-    sex: 'Male',
-    lastVisit: '08 Aug 2026',
-    status: 'Critical review',
-    risk: 'High',
-    doctor: 'Dr. Patel',
-    condition: 'Hypertension follow-up',
-    nextAction: 'Escalate to specialist',
-  },
-]
+const formatDate = (value) => (value ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'No visit yet')
 
-const stats = [
-  { label: 'Total patients', value: '1,248', change: '+12.4%' },
-  { label: 'Active cases', value: '186', change: '+8.1%' },
-  { label: 'Follow-up due', value: '42', change: '-3.2%' },
-  { label: 'Avg. wait time', value: '11 min', change: '-2.0 min' },
-]
+const mapPatient = (patient) => ({
+  ...patient,
+  id: patient.patientId,
+  name: patient.fullName,
+  sex: patient.gender,
+  lastVisit: 'No visit yet',
+  status: 'Stable',
+  risk: 'Low',
+  doctor: 'Care team',
+  condition: 'No treatment history yet',
+  nextAction: 'Add a treatment record',
+})
 
-const treatmentHistory = [
-  {
-    date: '12 Aug 2026',
-    doctor: 'Dr. Patel',
-    type: 'Consultation',
-    details: 'Reviewed symptoms and adjusted antihistamine dosage.',
-    status: 'Completed',
-  },
-  {
-    date: '03 Aug 2026',
-    doctor: 'Dr. Chen',
-    type: 'Lab review',
-    details: 'CBC and thyroid values within expected range.',
-    status: 'Completed',
-  },
-  {
-    date: '17 Jul 2026',
-    doctor: 'Dr. Gomez',
-    type: 'Prescription',
-    details: 'Issued 30-day medication plan with hydration guidance.',
-    status: 'Completed',
-  },
-  {
-    date: '02 Jul 2026',
-    doctor: 'Dr. Patel',
-    type: 'Follow-up',
-    details: 'Discussed lifestyle adjustments and recovery checklist.',
-    status: 'Pending review',
-  },
-]
+const mapTreatment = (treatment) => ({
+  date: formatDate(treatment.treatmentDate),
+  doctor: treatment.doctorName,
+  type: treatment.department,
+  details: treatment.diagnosis,
+  status: treatment.status,
+})
 
 const quickActions = ['Add treatment note', 'Schedule visit', 'Print summary', 'Send referral']
 
@@ -130,7 +64,7 @@ function SidebarNav() {
   )
 }
 
-function HeaderBar() {
+function HeaderBar({ onCreatePatient }) {
   return (
     <header className="topbar">
       <div>
@@ -139,7 +73,7 @@ function HeaderBar() {
       </div>
       <div className="toolbar">
         <div className="search-box">Search patient or record</div>
-        <button className="primary-btn" type="button">
+        <button className="primary-btn" type="button" onClick={onCreatePatient}>
           + New patient
         </button>
       </div>
@@ -157,7 +91,7 @@ function StatsCard({ label, value, change }) {
   )
 }
 
-function PatientTable({ selectedPatient, onSelect }) {
+function PatientTable({ patients, selectedPatient, onSelect }) {
   return (
     <section className="panel">
       <div className="panel-header">
@@ -166,6 +100,7 @@ function PatientTable({ selectedPatient, onSelect }) {
       </div>
 
       <div className="patient-list">
+        {patients.length === 0 && <p className="empty-state">No patients found in the database.</p>}
         {patients.map((patient) => (
           <button
             key={patient.id}
@@ -195,7 +130,7 @@ function PatientTable({ selectedPatient, onSelect }) {
   )
 }
 
-function TreatmentHistoryPanel({ patient }) {
+function TreatmentHistoryPanel({ patient, treatments }) {
   return (
     <section className="panel panel-large">
       <div className="panel-header">
@@ -222,7 +157,8 @@ function TreatmentHistoryPanel({ patient }) {
       </div>
 
       <div className="timeline">
-        {treatmentHistory.map((item, index) => (
+        {treatments.length === 0 && <p className="empty-state">No treatment records for this patient.</p>}
+        {treatments.map((item, index) => (
           <div className="timeline-item" key={`${item.date}-${index}`}>
             <div className="timeline-dot" />
             <div className="timeline-content">
@@ -287,14 +223,86 @@ function QuickActionPanel({ patient }) {
 }
 
 function App() {
-  const [selectedPatient, setSelectedPatient] = useState(patients[0])
+  const [patients, setPatients] = useState([])
+  const [selectedPatient, setSelectedPatient] = useState(null)
+  const [treatments, setTreatments] = useState([])
+  const [error, setError] = useState('')
+
+  const loadPatients = async () => {
+    const response = await fetch('/api/patients')
+    if (!response.ok) throw new Error('Unable to load patients')
+    const data = (await response.json()).map(mapPatient)
+    setPatients(data)
+    setSelectedPatient((current) => data.find((patient) => patient.id === current?.id) || data[0] || null)
+  }
+
+  useEffect(() => {
+    fetch('/api/patients')
+      .then((response) => {
+        if (!response.ok) throw new Error('Unable to load patients')
+        return response.json()
+      })
+      .then((data) => {
+        const loadedPatients = data.map(mapPatient)
+        setPatients(loadedPatients)
+        setSelectedPatient(loadedPatients[0] || null)
+      })
+      .catch((loadError) => setError(loadError.message))
+  }, [])
+
+  useEffect(() => {
+    if (!selectedPatient) return
+
+    fetch(`/api/patients/${selectedPatient.id}/treatments`)
+      .then((response) => {
+        if (!response.ok) throw new Error('Unable to load treatment history')
+        return response.json()
+      })
+      .then((data) => setTreatments(data.map(mapTreatment)))
+      .catch((loadError) => setError(loadError.message))
+  }, [selectedPatient])
+
+  const createPatient = async () => {
+    const firstName = window.prompt('First name')
+    const lastName = window.prompt('Last name')
+    if (!firstName || !lastName) return
+
+    try {
+      const response = await fetch('/api/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientId: `PT-${Date.now().toString().slice(-4)}`,
+          firstName,
+          lastName,
+          age: 0,
+          gender: 'Other',
+          phone: 'Not provided',
+        }),
+      })
+      if (!response.ok) throw new Error((await response.json()).message)
+      await loadPatients()
+      setError('')
+    } catch (createError) {
+      setError(createError.message)
+    }
+  }
+
+  const stats = [
+    { label: 'Total patients', value: patients.length, change: 'Database total' },
+    { label: 'Active cases', value: patients.length, change: 'Active records' },
+    { label: 'Follow-up due', value: treatments.filter((treatment) => treatment.status === 'Follow-up').length, change: 'Selected patient' },
+    { label: 'Avg. wait time', value: '—', change: 'Not tracked' },
+  ]
 
   return (
     <div className="clinic-app">
       <SidebarNav />
 
       <main className="main-panel">
-        <HeaderBar />
+        <HeaderBar onCreatePatient={createPatient} />
+
+        {error && <p className="error-state">{error}</p>}
 
         <section className="stats-grid">
           {stats.map((stat) => (
@@ -303,11 +311,11 @@ function App() {
         </section>
 
         <section className="content-grid">
-          <PatientTable selectedPatient={selectedPatient} onSelect={setSelectedPatient} />
-          <QuickActionPanel patient={selectedPatient} />
+          {selectedPatient ? <PatientTable patients={patients} selectedPatient={selectedPatient} onSelect={setSelectedPatient} /> : <section className="panel"><p className="empty-state">Add a patient to begin.</p></section>}
+          {selectedPatient && <QuickActionPanel patient={selectedPatient} />}
         </section>
 
-        <TreatmentHistoryPanel patient={selectedPatient} />
+        {selectedPatient && <TreatmentHistoryPanel patient={selectedPatient} treatments={treatments} />}
       </main>
     </div>
   )
