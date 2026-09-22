@@ -102,7 +102,10 @@ Copy `server/.env.example` to `server/.env` and set `MONGODB_URI`, `PORT`, and a
 
 - `POST /api/auth/register` creates a user with a password of at least 8 characters.
 - `POST /api/auth/login` returns a bearer token.
+- `GET /api/auth/google` starts optional Google OAuth login and returns the same application JWT after callback.
 - Patient and treatment requests require `Authorization: Bearer <token>`.
+
+To enable Google login, create a Google OAuth web application, add `http://localhost:5000/api/auth/google/callback` as an authorized redirect URI, and set the Google variables in `server/.env`.
 
 ## GitHub Repository Setup
 

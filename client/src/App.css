@@ -209,6 +209,34 @@
   margin-top: 20px;
 }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 14px;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: #e2e8f0;
+}
+
+.google-btn {
+  display: block;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 12px;
+  color: #0f172a;
+  text-align: center;
+  text-decoration: none;
+  font-weight: 700;
+}
+
 .logout-btn {
   position: absolute;
   top: 28px;
