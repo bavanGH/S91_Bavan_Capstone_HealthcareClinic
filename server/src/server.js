@@ -63,6 +63,23 @@ app.put('/api/patients/:patientId', async (req, res, next) => {
   }
 })
 
+app.delete('/api/patients/:patientId', async (req, res, next) => {
+  try {
+    const patient = await Patient.findOneAndUpdate(
+      { patientId: req.params.patientId, isActive: true },
+      { isActive: false },
+      { new: true },
+    )
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' })
+    }
+
+    res.json({ message: 'Patient deleted', patientId: patient.patientId })
+  } catch (error) {
+    next(error)
+  }
+})
+
 app.get('/api/patients/:patientId/treatments', async (req, res, next) => {
   try {
     const patient = await Patient.findOne({ patientId: req.params.patientId })
