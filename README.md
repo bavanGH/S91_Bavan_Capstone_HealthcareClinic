@@ -109,6 +109,20 @@ To enable Google login, create a Google OAuth web application, add `http://local
 
 Authenticated users can upload PDF, JPEG, PNG, and text documents up to 10 MB from a patient profile. Files are stored in `server/uploads/` and document metadata is linked to the patient in MongoDB.
 
+## Deploy the Backend on Render
+
+The root `render.yaml` defines the backend as a Node web service using `server/` as its root directory. In Render, select **New > Blueprint**, connect this repository, and apply the blueprint.
+
+Set these environment variables in the Render service before testing:
+
+- `MONGODB_URI`: a hosted MongoDB connection string, such as MongoDB Atlas.
+- `JWT_SECRET`: a long random signing secret.
+- `CLIENT_URL`: the deployed client URL.
+- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`: optional Google OAuth credentials.
+- `GOOGLE_REDIRECT_URI`: `https://<render-service>.onrender.com/api/auth/google/callback` when Google login is enabled.
+
+Render should report `/health` as healthy after deployment. The deployed API base URL is `https://<render-service>.onrender.com`.
+
 ## GitHub Repository Setup
 
 - Main branch: `main`
