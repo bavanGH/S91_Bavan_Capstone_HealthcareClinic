@@ -1,0 +1,23 @@
+meta {
+  name: Update treatment
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/treatments/{{treatmentId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+}
+
+body:json {
+  {
+    "status": "Completed",
+    "notes": "Reviewed with patient"
+  }
+}

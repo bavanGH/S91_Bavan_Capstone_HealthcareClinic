@@ -1,0 +1,15 @@
+meta {
+  name: List patient documents
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/patients/{{patientId}}/documents
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

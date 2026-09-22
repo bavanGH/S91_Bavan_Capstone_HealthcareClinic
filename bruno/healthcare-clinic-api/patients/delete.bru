@@ -1,0 +1,15 @@
+meta {
+  name: Soft delete patient
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/patients/{{patientId}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

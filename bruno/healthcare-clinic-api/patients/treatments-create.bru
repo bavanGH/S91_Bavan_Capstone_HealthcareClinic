@@ -1,0 +1,27 @@
+meta {
+  name: Create patient treatment
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/patients/{{patientId}}/treatments
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+}
+
+body:json {
+  {
+    "doctorName": "Dr. Patel",
+    "department": "Consultation",
+    "treatmentDate": "2026-09-22",
+    "diagnosis": "Seasonal allergy management",
+    "treatmentPlan": "Continue medication and review in 30 days",
+    "status": "Pending"
+  }
+}

@@ -1,0 +1,15 @@
+meta {
+  name: List all treatments
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/treatments
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}

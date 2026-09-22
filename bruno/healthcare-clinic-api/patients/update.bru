@@ -1,0 +1,23 @@
+meta {
+  name: Update patient
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/patients/{{patientId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+}
+
+body:json {
+  {
+    "phone": "+1-555-0199",
+    "email": "ava.updated@example.com"
+  }
+}

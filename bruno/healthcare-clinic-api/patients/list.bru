@@ -1,0 +1,15 @@
+meta {
+  name: List active patients
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/patients
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
