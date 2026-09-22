@@ -23,6 +23,19 @@ app.get('/api/patients', async (_req, res, next) => {
   }
 })
 
+app.get('/api/patients/:patientId', async (req, res, next) => {
+  try {
+    const patient = await Patient.findOne({ patientId: req.params.patientId, isActive: true })
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' })
+    }
+
+    res.json(patient)
+  } catch (error) {
+    next(error)
+  }
+})
+
 app.post('/api/patients', async (req, res, next) => {
   try {
     const patient = await Patient.create(req.body)
@@ -55,6 +68,28 @@ app.post('/api/patients/:patientId/treatments', async (req, res, next) => {
 
     const treatment = await Treatment.create({ ...req.body, patientId: patient._id })
     res.status(201).json(treatment)
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.get('/api/treatments', async (_req, res, next) => {
+  try {
+    const treatments = await Treatment.find().populate('patientId', 'patientId firstName lastName').sort({ treatmentDate: -1 })
+    res.json(treatments)
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.get('/api/treatments/:treatmentId', async (req, res, next) => {
+  try {
+    const treatment = await Treatment.findById(req.params.treatmentId).populate('patientId', 'patientId firstName lastName')
+    if (!treatment) {
+      return res.status(404).json({ message: 'Treatment not found' })
+    }
+
+    res.json(treatment)
   } catch (error) {
     next(error)
   }
