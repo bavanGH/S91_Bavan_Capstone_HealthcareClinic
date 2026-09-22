@@ -180,7 +180,7 @@ function TreatmentHistoryPanel({ patient, treatments }) {
   )
 }
 
-function QuickActionPanel({ patient, onUpdate, onDelete }) {
+function QuickActionPanel({ patient, documents, onUpdate, onDelete, onUpload }) {
   return (
     <section className="panel side-panel">
       <div className="panel-header">
@@ -222,6 +222,23 @@ function QuickActionPanel({ patient, onUpdate, onDelete }) {
           <button key={action} type="button" className="action-btn">
             {action}
           </button>
+        ))}
+      </div>
+
+      <div className="documents-box">
+        <div className="documents-heading">
+          <strong>Patient documents</strong>
+          <label className="upload-btn">
+            Upload
+            <input type="file" accept="application/pdf,image/jpeg,image/png,text/plain" onChange={(event) => onUpload(event.target.files[0])} />
+          </label>
+        </div>
+        {documents.length === 0 && <span className="documents-empty">No documents uploaded.</span>}
+        {documents.map((document) => (
+          <div className="document-row" key={document._id}>
+            <span>{document.originalName}</span>
+            <small>{Math.ceil(document.size / 1024)} KB</small>
+          </div>
         ))}
       </div>
     </section>
@@ -308,6 +325,7 @@ function App() {
   const [patients, setPatients] = useState([])
   const [selectedPatient, setSelectedPatient] = useState(null)
   const [treatments, setTreatments] = useState([])
+  const [documents, setDocuments] = useState([])
   const [error, setError] = useState('')
 
   const handleLogin = (data) => {
@@ -374,6 +392,18 @@ function App() {
       .catch((loadError) => setError(loadError.message))
   }, [request, selectedPatient, token])
 
+  useEffect(() => {
+    if (!selectedPatient) return
+
+    request(`/api/patients/${selectedPatient.id}/documents`)
+      .then((response) => {
+        if (!response.ok) throw new Error('Unable to load patient documents')
+        return response.json()
+      })
+      .then(setDocuments)
+      .catch((loadError) => setError(loadError.message))
+  }, [request, selectedPatient, token])
+
   const createPatient = async () => {
     const firstName = window.prompt('First name')
     const lastName = window.prompt('Last name')
@@ -433,6 +463,25 @@ function App() {
     }
   }
 
+  const uploadDocument = async (file) => {
+    if (!file) return
+    const formData = new FormData()
+    formData.append('document', file)
+
+    try {
+      const response = await request(`/api/patients/${selectedPatient.id}/documents`, {
+        method: 'POST',
+        body: formData,
+      })
+      if (!response.ok) throw new Error((await response.json()).message)
+      const document = await response.json()
+      setDocuments((current) => [document, ...current])
+      setError('')
+    } catch (uploadError) {
+      setError(uploadError.message)
+    }
+  }
+
   if (!token) return <LoginScreen onLogin={handleLogin} />
 
   const stats = [
@@ -460,7 +509,7 @@ function App() {
 
         <section className="content-grid">
           {selectedPatient ? <PatientTable patients={patients} selectedPatient={selectedPatient} onSelect={setSelectedPatient} /> : <section className="panel"><p className="empty-state">Add a patient to begin.</p></section>}
-          {selectedPatient && <QuickActionPanel patient={selectedPatient} onUpdate={updatePatient} onDelete={deletePatient} />}
+          {selectedPatient && <QuickActionPanel patient={selectedPatient} documents={documents} onUpdate={updatePatient} onDelete={deletePatient} onUpload={uploadDocument} />}
         </section>
 
         {selectedPatient && <TreatmentHistoryPanel patient={selectedPatient} treatments={treatments} />}
