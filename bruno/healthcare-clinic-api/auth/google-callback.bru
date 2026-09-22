@@ -1,0 +1,11 @@
+meta {
+  name: Google OAuth callback
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/auth/google/callback?code=paste-google-code-here
+  body: none
+  auth: none
+}
