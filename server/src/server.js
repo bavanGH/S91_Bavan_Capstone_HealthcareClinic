@@ -50,6 +50,10 @@ app.post('/api/auth/login', async (req, res, next) => {
   }
 })
 
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  res.json({ user: { id: req.user.userId, username: req.user.username } })
+})
+
 app.use('/api/patients', requireAuth)
 app.use('/api/treatments', requireAuth)
 
