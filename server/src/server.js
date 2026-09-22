@@ -1,18 +1,57 @@
 import dotenv from 'dotenv'
 import express from 'express'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
 import connectDB from './config/db.js'
-import { Patient, Treatment } from './models/index.js'
+import requireAuth from './middleware/auth.js'
+import { Patient, Treatment, User } from './models/index.js'
 
 dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 5000
+const JWT_SECRET = process.env.JWT_SECRET || 'development-only-secret'
 
 app.use(express.json())
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', message: 'Healthcare clinic API is running' })
 })
+
+app.post('/api/auth/register', async (req, res, next) => {
+  try {
+    const username = req.body.username?.trim().toLowerCase()
+    const password = req.body.password
+    if (!username || !password || password.length < 8) {
+      return res.status(400).json({ message: 'Username and a password of at least 8 characters are required' })
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12)
+    const user = await User.create({ username, passwordHash })
+    res.status(201).json({ id: user._id, username: user.username })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.post('/api/auth/login', async (req, res, next) => {
+  try {
+    const username = req.body.username?.trim().toLowerCase()
+    const user = await User.findOne({ username }).select('+passwordHash')
+    const validPassword = user && (await bcrypt.compare(req.body.password || '', user.passwordHash))
+    if (!validPassword) {
+      return res.status(401).json({ message: 'Invalid username or password' })
+    }
+
+    const token = jwt.sign({ userId: user._id.toString(), username: user.username }, JWT_SECRET, { expiresIn: '8h' })
+    res.json({ token, user: { username: user.username } })
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.use('/api/patients', requireAuth)
+app.use('/api/treatments', requireAuth)
 
 app.get('/api/patients', async (_req, res, next) => {
   try {
@@ -165,7 +204,10 @@ app.put('/api/treatments/:treatmentId', async (req, res, next) => {
 
 app.use((error, _req, res, _next) => {
   const status = error.name === 'ValidationError' || error.code === 11000 ? 400 : 500
-  res.status(status).json({ message: error.code === 11000 ? 'Patient ID already exists' : error.message })
+  const message = error.code === 11000
+    ? error.keyPattern?.username ? 'Username already exists' : 'Patient ID already exists'
+    : error.message
+  res.status(status).json({ message })
 })
 
 const startServer = async () => {

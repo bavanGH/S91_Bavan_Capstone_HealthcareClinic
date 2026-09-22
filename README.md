@@ -94,6 +94,16 @@ Clinic staff logs in → searches for a patient → selects the patient → view
 
 This repository contains the development work for the Healthcare Clinic Patient Treatment History Management System.
 
+## Authentication
+
+The server provides username/password registration and login. Passwords are stored as bcrypt hashes, and successful login returns an expiring JWT used to access patient and treatment APIs.
+
+Copy `server/.env.example` to `server/.env` and set `MONGODB_URI`, `PORT`, and a long random `JWT_SECRET` before starting the server.
+
+- `POST /api/auth/register` creates a user with a password of at least 8 characters.
+- `POST /api/auth/login` returns a bearer token.
+- Patient and treatment requests require `Authorization: Bearer <token>`.
+
 ## GitHub Repository Setup
 
 - Main branch: `main`

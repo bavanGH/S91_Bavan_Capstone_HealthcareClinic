@@ -136,6 +136,85 @@
   font-weight: 700;
 }
 
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(circle at top right, #dbeafe 0, #f3f7fb 45%, #ccfbf1 100%);
+}
+
+.auth-card {
+  width: min(100%, 430px);
+  background: white;
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+}
+
+.auth-brand {
+  padding: 0;
+  margin-bottom: 46px;
+}
+
+.auth-card h1 {
+  margin: 8px 0;
+  color: #0f172a;
+}
+
+.auth-copy {
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.auth-form input {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 12px;
+  color: #0f172a;
+}
+
+.auth-form input:focus {
+  outline: 2px solid #93c5fd;
+  border-color: #2563eb;
+}
+
+.auth-toggle,
+.logout-btn {
+  border: none;
+  background: transparent;
+  color: #1d4ed8;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.auth-toggle {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.logout-btn {
+  position: absolute;
+  top: 28px;
+  right: 28px;
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(160px, 1fr));
