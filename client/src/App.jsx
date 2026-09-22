@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import './App.css'
 
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'No visit yet')
@@ -228,14 +228,95 @@ function QuickActionPanel({ patient, onUpdate, onDelete }) {
   )
 }
 
+function LoginScreen({ onLogin }) {
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+
+  const submit = async (event) => {
+    event.preventDefault()
+    setError('')
+    try {
+      const endpoint = isRegistering ? '/api/auth/register' : '/api/auth/login'
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.message)
+      if (isRegistering) {
+        setIsRegistering(false)
+        setPassword('')
+        return
+      }
+      onLogin(data)
+    } catch (submitError) {
+      setError(submitError.message)
+    }
+  }
+
+  return (
+    <main className="auth-shell">
+      <section className="auth-card">
+        <div className="brand-wrap auth-brand">
+          <div className="brand-mark">+</div>
+          <div>
+            <p className="eyebrow">Clinic system</p>
+            <h2>CareFlow</h2>
+          </div>
+        </div>
+        <p className="eyebrow">Secure access</p>
+        <h1>{isRegistering ? 'Create your account' : 'Welcome back'}</h1>
+        <p className="auth-copy">Use your clinic username and password to access patient records.</p>
+        <form className="auth-form" onSubmit={submit}>
+          <label>
+            Username
+            <input value={username} onChange={(event) => setUsername(event.target.value)} minLength={3} required />
+          </label>
+          <label>
+            Password
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required />
+          </label>
+          {error && <p className="error-state">{error}</p>}
+          <button className="primary-btn" type="submit">{isRegistering ? 'Create account' : 'Sign in'}</button>
+        </form>
+        <button className="auth-toggle" type="button" onClick={() => { setIsRegistering(!isRegistering); setError('') }}>
+          {isRegistering ? 'Already have an account? Sign in' : 'New to CareFlow? Create an account'}
+        </button>
+      </section>
+    </main>
+  )
+}
+
 function App() {
+  const [token, setToken] = useState(() => localStorage.getItem('careflow_token'))
   const [patients, setPatients] = useState([])
   const [selectedPatient, setSelectedPatient] = useState(null)
   const [treatments, setTreatments] = useState([])
   const [error, setError] = useState('')
 
+  const request = useCallback((url, options = {}) => fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${token}`,
+    },
+  }), [token])
+
+  const handleLogin = (data) => {
+    localStorage.setItem('careflow_token', data.token)
+    setToken(data.token)
+  }
+
+  const logout = () => {
+    localStorage.removeItem('careflow_token')
+    setToken(null)
+  }
+
   const loadPatients = async () => {
-    const response = await fetch('/api/patients')
+    const response = await request('/api/patients')
     if (!response.ok) throw new Error('Unable to load patients')
     const data = (await response.json()).map(mapPatient)
     setPatients(data)
@@ -243,7 +324,9 @@ function App() {
   }
 
   useEffect(() => {
-    fetch('/api/patients')
+    if (!token) return
+
+    request('/api/patients')
       .then((response) => {
         if (!response.ok) throw new Error('Unable to load patients')
         return response.json()
@@ -254,19 +337,19 @@ function App() {
         setSelectedPatient(loadedPatients[0] || null)
       })
       .catch((loadError) => setError(loadError.message))
-  }, [])
+  }, [request, token])
 
   useEffect(() => {
     if (!selectedPatient) return
 
-    fetch(`/api/patients/${selectedPatient.id}/treatments`)
+    request(`/api/patients/${selectedPatient.id}/treatments`)
       .then((response) => {
         if (!response.ok) throw new Error('Unable to load treatment history')
         return response.json()
       })
       .then((data) => setTreatments(data.map(mapTreatment)))
       .catch((loadError) => setError(loadError.message))
-  }, [selectedPatient])
+  }, [request, selectedPatient, token])
 
   const createPatient = async () => {
     const firstName = window.prompt('First name')
@@ -274,7 +357,7 @@ function App() {
     if (!firstName || !lastName) return
 
     try {
-      const response = await fetch('/api/patients', {
+      const response = await request('/api/patients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -301,7 +384,7 @@ function App() {
     if (!firstName || !lastName || !phone) return
 
     try {
-      const response = await fetch(`/api/patients/${selectedPatient.id}`, {
+      const response = await request(`/api/patients/${selectedPatient.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ firstName, lastName, phone }),
@@ -318,7 +401,7 @@ function App() {
     if (!window.confirm(`Delete ${selectedPatient.name}?`)) return
 
     try {
-      const response = await fetch(`/api/patients/${selectedPatient.id}`, { method: 'DELETE' })
+      const response = await request(`/api/patients/${selectedPatient.id}`, { method: 'DELETE' })
       if (!response.ok) throw new Error((await response.json()).message)
       await loadPatients()
       setError('')
@@ -326,6 +409,8 @@ function App() {
       setError(deleteError.message)
     }
   }
+
+  if (!token) return <LoginScreen onLogin={handleLogin} />
 
   const stats = [
     { label: 'Total patients', value: patients.length, change: 'Database total' },
@@ -340,6 +425,7 @@ function App() {
 
       <main className="main-panel">
         <HeaderBar onCreatePatient={createPatient} />
+        <button className="logout-btn" type="button" onClick={logout}>Sign out</button>
 
         {error && <p className="error-state">{error}</p>}
 
