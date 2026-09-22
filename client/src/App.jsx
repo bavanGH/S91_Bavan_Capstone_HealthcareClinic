@@ -297,14 +297,6 @@ function App() {
   const [treatments, setTreatments] = useState([])
   const [error, setError] = useState('')
 
-  const request = useCallback((url, options = {}) => fetch(url, {
-    ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${token}`,
-    },
-  }), [token])
-
   const handleLogin = (data) => {
     localStorage.setItem('careflow_token', data.token)
     setToken(data.token)
@@ -314,6 +306,16 @@ function App() {
     localStorage.removeItem('careflow_token')
     setToken(null)
   }
+
+  const request = useCallback(async (url, options = {}) => {
+    return fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${token}`,
+      },
+    })
+  }, [token])
 
   const loadPatients = async () => {
     const response = await request('/api/patients')
@@ -328,6 +330,10 @@ function App() {
 
     request('/api/patients')
       .then((response) => {
+        if (response.status === 401) {
+          logout()
+          throw new Error('Your session has expired')
+        }
         if (!response.ok) throw new Error('Unable to load patients')
         return response.json()
       })
@@ -344,6 +350,10 @@ function App() {
 
     request(`/api/patients/${selectedPatient.id}/treatments`)
       .then((response) => {
+        if (response.status === 401) {
+          logout()
+          throw new Error('Your session has expired')
+        }
         if (!response.ok) throw new Error('Unable to load treatment history')
         return response.json()
       })
