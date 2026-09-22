@@ -73,6 +73,21 @@ app.post('/api/patients/:patientId/treatments', async (req, res, next) => {
   }
 })
 
+app.post('/api/treatments', async (req, res, next) => {
+  try {
+    const { patientId, ...treatmentData } = req.body
+    const patient = await Patient.findOne({ patientId, isActive: true })
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' })
+    }
+
+    const treatment = await Treatment.create({ ...treatmentData, patientId: patient._id })
+    res.status(201).json(treatment)
+  } catch (error) {
+    next(error)
+  }
+})
+
 app.get('/api/treatments', async (_req, res, next) => {
   try {
     const treatments = await Treatment.find().populate('patientId', 'patientId firstName lastName').sort({ treatmentDate: -1 })
