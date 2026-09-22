@@ -349,6 +349,11 @@
   font-weight: 600;
 }
 
+.danger-btn {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
 .panel-large {
   padding-bottom: 18px;
 }

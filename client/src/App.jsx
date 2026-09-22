@@ -180,7 +180,7 @@ function TreatmentHistoryPanel({ patient, treatments }) {
   )
 }
 
-function QuickActionPanel({ patient }) {
+function QuickActionPanel({ patient, onUpdate, onDelete }) {
   return (
     <section className="panel side-panel">
       <div className="panel-header">
@@ -212,7 +212,13 @@ function QuickActionPanel({ patient }) {
       </div>
 
       <div className="action-list">
-        {quickActions.map((action) => (
+        <button type="button" className="action-btn" onClick={onUpdate}>
+          Edit patient
+        </button>
+        <button type="button" className="action-btn danger-btn" onClick={onDelete}>
+          Delete patient
+        </button>
+        {quickActions.slice(0, 2).map((action) => (
           <button key={action} type="button" className="action-btn">
             {action}
           </button>
@@ -288,6 +294,39 @@ function App() {
     }
   }
 
+  const updatePatient = async () => {
+    const firstName = window.prompt('First name', selectedPatient.firstName)
+    const lastName = window.prompt('Last name', selectedPatient.lastName)
+    const phone = window.prompt('Phone', selectedPatient.phone)
+    if (!firstName || !lastName || !phone) return
+
+    try {
+      const response = await fetch(`/api/patients/${selectedPatient.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, lastName, phone }),
+      })
+      if (!response.ok) throw new Error((await response.json()).message)
+      await loadPatients()
+      setError('')
+    } catch (updateError) {
+      setError(updateError.message)
+    }
+  }
+
+  const deletePatient = async () => {
+    if (!window.confirm(`Delete ${selectedPatient.name}?`)) return
+
+    try {
+      const response = await fetch(`/api/patients/${selectedPatient.id}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error((await response.json()).message)
+      await loadPatients()
+      setError('')
+    } catch (deleteError) {
+      setError(deleteError.message)
+    }
+  }
+
   const stats = [
     { label: 'Total patients', value: patients.length, change: 'Database total' },
     { label: 'Active cases', value: patients.length, change: 'Active records' },
@@ -312,7 +351,7 @@ function App() {
 
         <section className="content-grid">
           {selectedPatient ? <PatientTable patients={patients} selectedPatient={selectedPatient} onSelect={setSelectedPatient} /> : <section className="panel"><p className="empty-state">Add a patient to begin.</p></section>}
-          {selectedPatient && <QuickActionPanel patient={selectedPatient} />}
+          {selectedPatient && <QuickActionPanel patient={selectedPatient} onUpdate={updatePatient} onDelete={deletePatient} />}
         </section>
 
         {selectedPatient && <TreatmentHistoryPanel patient={selectedPatient} treatments={treatments} />}
