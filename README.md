@@ -107,6 +107,8 @@ Copy `server/.env.example` to `server/.env` and set `MONGODB_URI`, `PORT`, and a
 
 To enable Google login, create a Google OAuth web application, add `http://localhost:5000/api/auth/google/callback` as an authorized redirect URI, and set the Google variables in `server/.env`.
 
+Authenticated users can upload PDF, JPEG, PNG, and text documents up to 10 MB from a patient profile. Files are stored in `server/uploads/` and document metadata is linked to the patient in MongoDB.
+
 ## GitHub Repository Setup
 
 - Main branch: `main`

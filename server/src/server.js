@@ -2,10 +2,15 @@ import dotenv from 'dotenv'
 import express from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import multer from 'multer'
 import { OAuth2Client } from 'google-auth-library'
+import { mkdir } from 'node:fs/promises'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import crypto from 'node:crypto'
 import connectDB from './config/db.js'
 import requireAuth from './middleware/auth.js'
-import { Patient, Treatment, User } from './models/index.js'
+import { Document, Patient, Treatment, User } from './models/index.js'
 
 dotenv.config()
 
@@ -15,6 +20,18 @@ const JWT_SECRET = process.env.JWT_SECRET || 'development-only-secret'
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${PORT}/api/auth/google/callback`
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI)
+const uploadDirectory = path.join(path.dirname(fileURLToPath(import.meta.url)), '../uploads')
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, callback) => mkdir(uploadDirectory, { recursive: true }).then(() => callback(null, uploadDirectory)).catch(callback),
+    filename: (_req, file, callback) => callback(null, `${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`),
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'text/plain']
+    callback(null, allowedTypes.includes(file.mimetype))
+  },
+})
 
 app.use(express.json())
 
@@ -112,6 +129,46 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
 
 app.use('/api/patients', requireAuth)
 app.use('/api/treatments', requireAuth)
+app.use('/api/documents', requireAuth)
+
+app.post('/api/patients/:patientId/documents', upload.single('document'), async (req, res, next) => {
+  try {
+    const patient = await Patient.findOne({ patientId: req.params.patientId, isActive: true })
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' })
+    }
+    if (!req.file) {
+      return res.status(400).json({ message: 'A PDF, image, or text document is required' })
+    }
+
+    const document = await Document.create({
+      patientId: patient._id,
+      uploadedBy: req.user.userId,
+      originalName: req.file.originalname,
+      storedName: req.file.filename,
+      storagePath: req.file.path,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+    })
+    res.status(201).json(document)
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.get('/api/patients/:patientId/documents', async (req, res, next) => {
+  try {
+    const patient = await Patient.findOne({ patientId: req.params.patientId, isActive: true })
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' })
+    }
+
+    const documents = await Document.find({ patientId: patient._id }).sort({ createdAt: -1 }).select('-storagePath')
+    res.json(documents)
+  } catch (error) {
+    next(error)
+  }
+})
 
 app.get('/api/patients', async (_req, res, next) => {
   try {
@@ -263,6 +320,10 @@ app.put('/api/treatments/:treatmentId', async (req, res, next) => {
 })
 
 app.use((error, _req, res, _next) => {
+  if (error instanceof multer.MulterError) {
+    const message = error.code === 'LIMIT_FILE_SIZE' ? 'File must be 10 MB or smaller' : 'Invalid file upload'
+    return res.status(400).json({ message })
+  }
   const status = error.name === 'ValidationError' || error.code === 11000 ? 400 : 500
   const message = error.code === 11000
     ? error.keyPattern?.username ? 'Username already exists' : 'Patient ID already exists'

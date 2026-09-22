@@ -461,6 +461,59 @@
   background: #fef2f2;
 }
 
+.documents-box {
+  border-top: 1px solid #e2e8f0;
+  margin-top: 20px;
+  padding-top: 16px;
+}
+
+.documents-heading,
+.document-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.upload-btn {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.upload-btn input {
+  display: none;
+}
+
+.documents-empty {
+  display: block;
+  color: #64748b;
+  font-size: 0.85rem;
+  margin-top: 12px;
+}
+
+.document-row {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 10px 0;
+  color: #334155;
+  font-size: 0.85rem;
+}
+
+.document-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-row small {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
 .panel-large {
   padding-bottom: 18px;
 }
