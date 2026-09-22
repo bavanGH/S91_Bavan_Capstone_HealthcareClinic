@@ -282,6 +282,10 @@ function LoginScreen({ onLogin }) {
           {error && <p className="error-state">{error}</p>}
           <button className="primary-btn" type="submit">{isRegistering ? 'Create account' : 'Sign in'}</button>
         </form>
+        <div className="auth-divider"><span>or</span></div>
+        <a className="google-btn" href="/api/auth/google">
+          Continue with Google
+        </a>
         <button className="auth-toggle" type="button" onClick={() => { setIsRegistering(!isRegistering); setError('') }}>
           {isRegistering ? 'Already have an account? Sign in' : 'New to CareFlow? Create an account'}
         </button>
@@ -291,7 +295,16 @@ function LoginScreen({ onLogin }) {
 }
 
 function App() {
-  const [token, setToken] = useState(() => localStorage.getItem('careflow_token'))
+  const [token, setToken] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    const googleToken = params.get('token')
+    if (googleToken) {
+      localStorage.setItem('careflow_token', googleToken)
+      window.history.replaceState({}, document.title, window.location.pathname)
+      return googleToken
+    }
+    return localStorage.getItem('careflow_token')
+  })
   const [patients, setPatients] = useState([])
   const [selectedPatient, setSelectedPatient] = useState(null)
   const [treatments, setTreatments] = useState([])

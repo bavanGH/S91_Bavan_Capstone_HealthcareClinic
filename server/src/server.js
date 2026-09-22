@@ -2,6 +2,7 @@ import dotenv from 'dotenv'
 import express from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import { OAuth2Client } from 'google-auth-library'
 import connectDB from './config/db.js'
 import requireAuth from './middleware/auth.js'
 import { Patient, Treatment, User } from './models/index.js'
@@ -11,6 +12,9 @@ dotenv.config()
 const app = express()
 const PORT = process.env.PORT || 5000
 const JWT_SECRET = process.env.JWT_SECRET || 'development-only-secret'
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${PORT}/api/auth/google/callback`
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI)
 
 app.use(express.json())
 
@@ -27,7 +31,7 @@ app.post('/api/auth/register', async (req, res, next) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 12)
-    const user = await User.create({ username, passwordHash })
+    const user = await User.create({ username, passwordHash, authProvider: 'local' })
     res.status(201).json({ id: user._id, username: user.username })
   } catch (error) {
     next(error)
@@ -47,6 +51,58 @@ app.post('/api/auth/login', async (req, res, next) => {
     res.json({ token, user: { username: user.username } })
   } catch (error) {
     next(error)
+  }
+})
+
+app.get('/api/auth/google', (_req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(503).json({ message: 'Google authentication is not configured' })
+  }
+
+  const authorizationUrl = googleClient.generateAuthUrl({
+    access_type: 'offline',
+    scope: ['openid', 'email', 'profile'],
+    prompt: 'select_account',
+  })
+  res.redirect(authorizationUrl)
+})
+
+app.get('/api/auth/google/callback', async (req, res) => {
+  try {
+    if (req.query.error) {
+      return res.redirect(`${CLIENT_URL}/?auth_error=google_denied`)
+    }
+    if (!req.query.code) {
+      return res.redirect(`${CLIENT_URL}/?auth_error=missing_google_code`)
+    }
+
+    const { tokens } = await googleClient.getToken(req.query.code)
+    const ticket = await googleClient.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    })
+    const profile = ticket.getPayload()
+    if (!profile?.sub || !profile.email) {
+      return res.redirect(`${CLIENT_URL}/?auth_error=invalid_google_profile`)
+    }
+
+    const user = await User.findOneAndUpdate(
+      { $or: [{ providerId: profile.sub }, { username: profile.email }] },
+      {
+        $set: {
+          email: profile.email,
+          displayName: profile.name,
+          authProvider: 'google',
+          providerId: profile.sub,
+        },
+        $setOnInsert: { username: profile.email },
+      },
+      { new: true, upsert: true, runValidators: true },
+    )
+    const token = jwt.sign({ userId: user._id.toString(), username: user.username }, JWT_SECRET, { expiresIn: '8h' })
+    res.redirect(`${CLIENT_URL}/?token=${encodeURIComponent(token)}`)
+  } catch (_error) {
+    res.redirect(`${CLIENT_URL}/?auth_error=google_login_failed`)
   }
 })
 

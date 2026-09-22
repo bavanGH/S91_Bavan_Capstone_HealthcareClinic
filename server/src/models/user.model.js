@@ -12,8 +12,26 @@ const userSchema = new mongoose.Schema(
     },
     passwordHash: {
       type: String,
-      required: true,
       select: false,
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+    displayName: {
+      type: String,
+      trim: true,
+    },
+    authProvider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local',
+    },
+    providerId: {
+      type: String,
+      sparse: true,
+      unique: true,
     },
   },
   { timestamps: true },
