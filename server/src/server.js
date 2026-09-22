@@ -45,6 +45,24 @@ app.post('/api/patients', async (req, res, next) => {
   }
 })
 
+app.put('/api/patients/:patientId', async (req, res, next) => {
+  try {
+    const { patientId: _patientId, ...patientData } = req.body
+    const patient = await Patient.findOneAndUpdate(
+      { patientId: req.params.patientId, isActive: true },
+      patientData,
+      { new: true, runValidators: true },
+    )
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' })
+    }
+
+    res.json(patient)
+  } catch (error) {
+    next(error)
+  }
+})
+
 app.get('/api/patients/:patientId/treatments', async (req, res, next) => {
   try {
     const patient = await Patient.findOne({ patientId: req.params.patientId })
@@ -100,6 +118,24 @@ app.get('/api/treatments', async (_req, res, next) => {
 app.get('/api/treatments/:treatmentId', async (req, res, next) => {
   try {
     const treatment = await Treatment.findById(req.params.treatmentId).populate('patientId', 'patientId firstName lastName')
+    if (!treatment) {
+      return res.status(404).json({ message: 'Treatment not found' })
+    }
+
+    res.json(treatment)
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.put('/api/treatments/:treatmentId', async (req, res, next) => {
+  try {
+    const { patientId: _patientId, ...treatmentData } = req.body
+    const treatment = await Treatment.findByIdAndUpdate(
+      req.params.treatmentId,
+      treatmentData,
+      { new: true, runValidators: true },
+    )
     if (!treatment) {
       return res.status(404).json({ message: 'Treatment not found' })
     }
