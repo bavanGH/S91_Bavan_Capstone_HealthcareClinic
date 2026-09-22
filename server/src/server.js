@@ -1,6 +1,7 @@
 import dotenv from 'dotenv'
 import express from 'express'
 import connectDB from './config/db.js'
+import { Patient, Treatment } from './models/index.js'
 
 dotenv.config()
 
@@ -11,6 +12,57 @@ app.use(express.json())
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', message: 'Healthcare clinic API is running' })
+})
+
+app.get('/api/patients', async (_req, res, next) => {
+  try {
+    const patients = await Patient.find({ isActive: true }).sort({ lastName: 1, firstName: 1 })
+    res.json(patients)
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.post('/api/patients', async (req, res, next) => {
+  try {
+    const patient = await Patient.create(req.body)
+    res.status(201).json(patient)
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.get('/api/patients/:patientId/treatments', async (req, res, next) => {
+  try {
+    const patient = await Patient.findOne({ patientId: req.params.patientId })
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' })
+    }
+
+    const treatments = await Treatment.find({ patientId: patient._id }).sort({ treatmentDate: -1 })
+    res.json(treatments)
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.post('/api/patients/:patientId/treatments', async (req, res, next) => {
+  try {
+    const patient = await Patient.findOne({ patientId: req.params.patientId })
+    if (!patient) {
+      return res.status(404).json({ message: 'Patient not found' })
+    }
+
+    const treatment = await Treatment.create({ ...req.body, patientId: patient._id })
+    res.status(201).json(treatment)
+  } catch (error) {
+    next(error)
+  }
+})
+
+app.use((error, _req, res, _next) => {
+  const status = error.name === 'ValidationError' || error.code === 11000 ? 400 : 500
+  res.status(status).json({ message: error.code === 11000 ? 'Patient ID already exists' : error.message })
 })
 
 const startServer = async () => {
