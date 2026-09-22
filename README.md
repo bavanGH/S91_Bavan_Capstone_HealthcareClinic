@@ -93,3 +93,10 @@ Clinic staff logs in → searches for a patient → selects the patient → view
 ## Repository
 
 This repository contains the development work for the Healthcare Clinic Patient Treatment History Management System.
+
+## GitHub Repository Setup
+
+- Main branch: `main`
+- Development branch: `feature/repository-setup`
+- Repository visibility: Public
+- README created as part of the initial Capstone repository setup
