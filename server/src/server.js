@@ -11,10 +11,12 @@ import crypto from 'node:crypto'
 import connectDB from './config/db.js'
 import requireAuth from './middleware/auth.js'
 import { Document, Patient, Treatment, User } from './models/index.js'
+import cors from 'cors'
 
 dotenv.config()
 
 const app = express()
+app.use(cors())
 const PORT = process.env.PORT || 5000
 const JWT_SECRET = process.env.JWT_SECRET || 'development-only-secret'
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${PORT}/api/auth/google/callback`

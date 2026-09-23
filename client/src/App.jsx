@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import './App.css'
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || ''
+
+const apiUrl = (path) => `${API_BASE_URL}${path}`
+
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'No visit yet')
 
 const mapPatient = (patient) => ({
@@ -256,7 +260,7 @@ function LoginScreen({ onLogin }) {
     setError('')
     try {
       const endpoint = isRegistering ? '/api/auth/register' : '/api/auth/login'
-      const response = await fetch(endpoint, {
+      const response = await fetch(apiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -300,7 +304,7 @@ function LoginScreen({ onLogin }) {
           <button className="primary-btn" type="submit">{isRegistering ? 'Create account' : 'Sign in'}</button>
         </form>
         <div className="auth-divider"><span>or</span></div>
-        <a className="google-btn" href="/api/auth/google">
+        <a className="google-btn" href={apiUrl('/api/auth/google')}>
           Continue with Google
         </a>
         <button className="auth-toggle" type="button" onClick={() => { setIsRegistering(!isRegistering); setError('') }}>
@@ -339,7 +343,7 @@ function App() {
   }
 
   const request = useCallback(async (url, options = {}) => {
-    return fetch(url, {
+    return fetch(apiUrl(url), {
       ...options,
       headers: {
         ...options.headers,
