@@ -1,7 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  color: #102a43;
+  background: #f4f7fb;
+
+  --color-primary-navy: #102a43;
+  --color-sidebar-navy: #0b1f33;
+  --color-medical-blue: #2563eb;
+  --color-blue-hover: #1d4ed8;
+  --color-soft-blue: #eaf2ff;
+  --color-page-background: #f4f7fb;
+  --color-card-background: #ffffff;
+  --color-main-text: #102a43;
+  --color-muted-text: #64748b;
+  --color-border: #e2e8f0;
+  --color-success: #15803d;
+  --color-warning: #a16207;
+  --color-error: #b91c1c;
+
+  --color-secondary-text: #334155;
+  --color-muted-surface: #f8fafc;
+  --color-control-surface: #f1f5f9;
+  --color-danger-surface: #fef2f2;
+
+  --font-body: 'Inter', 'Segoe UI', Arial, sans-serif;
+  --font-heading: 'Manrope', 'Inter', 'Segoe UI', Arial, sans-serif;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+
+  --radius-small: 8px;
+  --radius-control: 10px;
+  --radius-card: 18px;
+  --radius-modal: 20px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 12px 32px rgba(16, 42, 67, 0.08);
+  --shadow-modal: 0 24px 60px rgba(11, 31, 51, 0.2);
+  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.18);
+  --transition-ui: 160ms ease;
+}
+
 html {
-  font-family: Inter, 'Segoe UI', sans-serif;
-  background: #f3f7fb;
-  color: #0f172a;
+  font-family: var(--font-body);
+  background: var(--color-page-background);
+  color: var(--color-main-text);
 }
 
 * {
@@ -11,12 +61,14 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  background: #f3f7fb;
+  background: var(--color-page-background);
+  color: var(--color-main-text);
 }
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -27,7 +79,39 @@ select {
 
 h1,
 h2,
+h3 {
+  font-family: var(--font-heading);
+}
+
+h1,
+h2,
 h3,
 p {
   margin-top: 0;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  transition:
+    color var(--transition-ui),
+    background-color var(--transition-ui),
+    border-color var(--transition-ui),
+    box-shadow var(--transition-ui);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.28);
+  outline-offset: 2px;
 }
