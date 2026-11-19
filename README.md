@@ -21,6 +21,42 @@ For the Netlify production environment, set `VITE_API_URL` to
 `https://s91-bavan-capstone-healthcareclinic-1dx4.onrender.com` (without a trailing slash).
 The local `client/.env` file is ignored and should not be committed.
 
+## Docker
+
+Prerequisites: Docker Engine or Docker Desktop with the Compose plugin. The app
+uses the existing MongoDB Atlas database; provide your own Atlas URI and a
+strong JWT secret. Create a root `.env` file (ignored by Git) with:
+
+```dotenv
+MONGODB_URI=<your MongoDB Atlas URI>
+JWT_SECRET=<your strong random secret>
+```
+
+`CLIENT_URL` defaults to `http://localhost:8080` and `PORT` is set to `5000`.
+The frontend image builds with an empty `VITE_API_URL`, so API requests use the
+same-origin Nginx proxy.
+Google OAuth is optional; configure `GOOGLE_CLIENT_ID`,
+`GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` in the root `.env` only if
+using Google sign-in. Set the redirect URI to the public frontend origin plus
+`/api/auth/google/callback`.
+
+Build and start both services:
+
+```sh
+docker compose up --build -d
+```
+
+Open `http://localhost:8080`. Verify the API through the frontend proxy:
+
+```sh
+docker compose ps
+curl http://localhost:8080/health
+```
+
+Follow service logs with `docker compose logs -f`; stop the services with
+`docker compose down`. The named `uploads` volume persists uploaded documents
+when the containers stop.
+
 ## Planned Features
 
 - Secure user login
