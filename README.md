@@ -12,6 +12,15 @@ Login → Dashboard → Search Patient → Select Patient → View Patient Profi
 
 The system will also allow authorized users to add new treatment records to a patient's history.
 
+## Live Deployment
+
+- **Frontend:** [CareFlow on Netlify](https://healthcare-clinic-frontend.netlify.app/)
+- **Backend API:** [CareFlow API on Render](https://s91-bavan-capstone-healthcareclinic-1dx4.onrender.com)
+
+For the Netlify production environment, set `VITE_API_URL` to
+`https://s91-bavan-capstone-healthcareclinic-1dx4.onrender.com` (without a trailing slash).
+The local `client/.env` file is ignored and should not be committed.
+
 ## Planned Features
 
 - Secure user login
@@ -117,11 +126,12 @@ Set these environment variables in the Render service before testing:
 
 - `MONGODB_URI`: a hosted MongoDB connection string, such as MongoDB Atlas.
 - `JWT_SECRET`: a long random signing secret.
-- `CLIENT_URL`: the deployed client URL.
+- `CLIENT_URL`: `https://healthcare-clinic-frontend.netlify.app`.
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`: optional Google OAuth credentials.
-- `GOOGLE_REDIRECT_URI`: `https://<render-service>.onrender.com/api/auth/google/callback` when Google login is enabled.
+- `GOOGLE_REDIRECT_URI`: `https://s91-bavan-capstone-healthcareclinic-1dx4.onrender.com/api/auth/google/callback` when Google login is enabled.
 
-Render should report `/health` as healthy after deployment. The deployed API base URL is `https://<render-service>.onrender.com`.
+Render should report `/health` as healthy after deployment. The deployed API base URL is
+`https://s91-bavan-capstone-healthcareclinic-1dx4.onrender.com`.
 
 ## GitHub Repository Setup
 
