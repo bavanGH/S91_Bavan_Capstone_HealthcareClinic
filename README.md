@@ -40,6 +40,15 @@ Google OAuth is optional; configure `GOOGLE_CLIENT_ID`,
 using Google sign-in. Set the redirect URI to the public frontend origin plus
 `/api/auth/google/callback`.
 
+AI notes suggestions are optional. Set `GEMINI_API_KEY` in the ignored root
+`.env` for Docker Compose or in `server/.env` for local backend development.
+Compose passes it only to the backend. Suggestions use Gemini 3.5 Flash-Lite and
+send only the clinician-written notes draft; the form requires confirmation
+that it is de-identified. Never include patient names, IDs, diagnoses, or
+medical-record details. Suggestions are drafts and are saved only after they
+are accepted and the treatment form is submitted. The required placeholder is
+documented in `server/.env.example`.
+
 Build and start both services:
 
 ```sh

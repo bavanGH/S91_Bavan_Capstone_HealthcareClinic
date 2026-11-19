@@ -317,7 +317,7 @@ function TreatmentDetailsModal({ treatment, status, error, successMessage, onClo
   )
 }
 
-function EditTreatmentModal({ treatment, patient, onClose, onSubmit }) {
+function EditTreatmentModal({ treatment, patient, onClose, onSubmit, onSuggestNotes }) {
   const [form, setForm] = useState(() => ({
     doctorName: treatment.doctorName || '',
     department: treatment.department || '',
@@ -523,6 +523,12 @@ function EditTreatmentModal({ treatment, patient, onClose, onSubmit }) {
             Notes
             <textarea value={form.notes} onChange={(event) => updateField('notes', event.target.value)} disabled={isSubmitting} />
           </label>
+          <NotesSuggestionAssistant
+            draftText={form.notes}
+            disabled={isSubmitting}
+            onSuggest={onSuggestNotes}
+            onAccept={(text) => updateField('notes', text)}
+          />
 
           {formError && <p className="error-state modal-message" role="alert">{formError}</p>}
 
@@ -536,6 +542,93 @@ function EditTreatmentModal({ treatment, patient, onClose, onSubmit }) {
           </div>
         </form>
       </section>
+    </div>
+  )
+}
+
+function NotesSuggestionAssistant({ draftText, disabled, onSuggest, onAccept }) {
+  const [suggestionResult, setSuggestionResult] = useState(null)
+  const [errorResult, setErrorResult] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [confirmedDraft, setConfirmedDraft] = useState('')
+  const requestInProgress = useRef(false)
+  const isMounted = useRef(false)
+
+  useEffect(() => {
+    isMounted.current = true
+    return () => {
+      isMounted.current = false
+    }
+  }, [])
+
+  const suggestion = suggestionResult?.draftText === draftText ? suggestionResult.text : ''
+  const error = errorResult?.draftText === draftText ? errorResult.message : ''
+  const privacyConfirmed = confirmedDraft === draftText
+
+  const requestSuggestion = async () => {
+    if (requestInProgress.current || disabled || !draftText.trim() || !privacyConfirmed) return
+
+    requestInProgress.current = true
+    setIsLoading(true)
+    setSuggestionResult(null)
+    setErrorResult(null)
+    try {
+      const text = await onSuggest(draftText)
+      if (isMounted.current) setSuggestionResult({ draftText, text })
+    } catch (requestError) {
+      if (isMounted.current) {
+        setErrorResult({
+          draftText,
+          message: requestError instanceof Error ? requestError.message : 'Unable to generate a suggestion.',
+        })
+      }
+    } finally {
+      requestInProgress.current = false
+      if (isMounted.current) setIsLoading(false)
+    }
+  }
+
+  const acceptSuggestion = () => {
+    onAccept(suggestion)
+    setSuggestionResult(null)
+  }
+
+  return (
+    <div className="notes-suggestion">
+      <p className="notes-suggestion-privacy">
+        Only this draft is sent to Gemini. Do not include patient names, IDs, diagnoses, or medical-record details.
+      </p>
+      <label className="notes-suggestion-confirmation">
+        <input
+          type="checkbox"
+          checked={privacyConfirmed}
+          onChange={(event) => setConfirmedDraft(event.target.checked ? draftText : '')}
+          disabled={disabled || isLoading || !draftText.trim()}
+        />
+        <span>I confirm this draft is de-identified and contains no patient names, IDs, diagnoses, or medical-record details.</span>
+      </label>
+      <button
+        className="secondary-btn"
+        type="button"
+        onClick={requestSuggestion}
+        disabled={disabled || isLoading || !draftText.trim() || !privacyConfirmed}
+      >
+        {isLoading ? 'Generating suggestion...' : 'AI Suggest'}
+      </button>
+      {error && <p className="error-state modal-message" role="alert">{error}</p>}
+      {suggestion && (
+        <div className="notes-suggestion-result" role="status" aria-live="polite">
+          <p>{suggestion}</p>
+          <div className="notes-suggestion-actions">
+            <button className="secondary-btn" type="button" onClick={acceptSuggestion} disabled={disabled}>
+              Accept
+            </button>
+            <button className="cancel-btn" type="button" onClick={() => setSuggestionResult(null)} disabled={disabled}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -920,7 +1013,7 @@ function LoginScreen({ onLogin }) {
   )
 }
 
-function AddTreatmentModal({ patient, onClose, onSubmit }) {
+function AddTreatmentModal({ patient, onClose, onSubmit, onSuggestNotes }) {
   const [form, setForm] = useState({
     doctorName: '',
     department: '',
@@ -1090,6 +1183,12 @@ function AddTreatmentModal({ patient, onClose, onSubmit }) {
             Notes
             <textarea value={form.notes} onChange={(event) => updateField('notes', event.target.value)} />
           </label>
+          <NotesSuggestionAssistant
+            draftText={form.notes}
+            disabled={isSubmitting}
+            onSuggest={onSuggestNotes}
+            onAccept={(text) => updateField('notes', text)}
+          />
 
           {formError && <p className="error-state modal-message">{formError}</p>}
 
@@ -1805,6 +1904,24 @@ function App() {
     }
   }
 
+  const suggestNotes = async (draftText) => {
+    const response = await request('/api/treatments/suggestions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ draftText }),
+    })
+    if (response.status === 401) {
+      logout()
+      throw new Error('Your session has expired')
+    }
+
+    const data = await parseApiJson(response, 'Unable to generate a notes suggestion')
+    if (!data || typeof data.suggestion !== 'string' || !data.suggestion.trim()) {
+      throw new Error('The server returned an invalid suggestion.')
+    }
+    return data.suggestion
+  }
+
   const createTreatment = async (treatmentData) => {
     if (!selectedPatient) throw new Error('Select a patient before adding a treatment.')
 
@@ -2100,6 +2217,7 @@ function App() {
             patient={selectedPatient}
             onClose={() => setIsTreatmentEditOpen(false)}
             onSubmit={(treatmentData) => updateTreatment(treatmentDetails.id, treatmentData)}
+            onSuggestNotes={suggestNotes}
           />
         )}
         {selectedPatient && isTreatmentModalOpen && (
@@ -2107,6 +2225,7 @@ function App() {
             patient={selectedPatient}
             onClose={() => setIsTreatmentModalOpen(false)}
             onSubmit={createTreatment}
+            onSuggestNotes={suggestNotes}
           />
         )}
         {isPatientCreationOpen && (

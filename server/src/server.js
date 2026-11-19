@@ -1,4 +1,6 @@
 import dotenv from 'dotenv'
+import { ApiError, GoogleGenAI } from '@google/genai'
+import { rateLimit } from 'express-rate-limit'
 import express from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
@@ -11,6 +13,12 @@ import crypto from 'node:crypto'
 import connectDB from './config/db.js'
 import requireAuth from './middleware/auth.js'
 import { Document, Patient, Treatment, User } from './models/index.js'
+import {
+  generateNotesSuggestion,
+  GEMINI_REQUEST_TIMEOUT_MS,
+  isGeminiTimeoutError,
+  validateNotesSuggestionBody,
+} from './services/treatmentSuggestion.js'
 import cors from 'cors'
 
 dotenv.config()
@@ -132,6 +140,45 @@ app.get('/api/auth/me', requireAuth, (req, res) => {
 app.use('/api/patients', requireAuth)
 app.use('/api/treatments', requireAuth)
 app.use('/api/documents', requireAuth)
+
+const notesSuggestionLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user.userId,
+  message: { message: 'Too many AI suggestion requests. Please try again shortly.' },
+})
+
+app.post('/api/treatments/suggestions', notesSuggestionLimiter, async (req, res) => {
+  const validation = validateNotesSuggestionBody(req.body)
+  if (validation.error) {
+    return res.status(400).json({ message: validation.error })
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY?.trim()
+  if (!apiKey) {
+    return res.status(503).json({ message: 'AI suggestions are not configured.' })
+  }
+
+  try {
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: { timeout: GEMINI_REQUEST_TIMEOUT_MS, retryOptions: { attempts: 1 } },
+    })
+    const suggestion = await generateNotesSuggestion(validation.draftText, ai)
+    return res.json({ suggestion })
+  } catch (error) {
+    console.error('Gemini notes suggestion request failed')
+    if (isGeminiTimeoutError(error)) {
+      return res.status(504).json({ message: 'The suggestion service took too long to respond. Please try again.' })
+    }
+    if (error instanceof ApiError && error.status === 429) {
+      return res.status(503).json({ message: 'Gemini is temporarily rate-limited. Please try again shortly.' })
+    }
+    return res.status(502).json({ message: 'Unable to generate a suggestion right now. Please try again.' })
+  }
+})
 
 app.post('/api/patients/:patientId/documents', upload.single('document'), async (req, res, next) => {
   try {
