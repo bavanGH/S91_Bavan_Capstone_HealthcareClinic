@@ -1,186 +1,210 @@
-# Healthcare Clinic Patient Treatment History Management System
+# CareFlow - Healthcare Clinic Management
 
-## Project Idea
+CareFlow is a web application for organizing clinic patient records and treatment histories. This project was developed as an internship capstone.
 
-Small healthcare clinics often maintain patient information using paper files or disconnected systems. This makes it difficult to retrieve complete treatment histories and can lead to delays, duplicate tests, and inconsistent patient care.
+## 1. Project Title
 
-The **Healthcare Clinic Patient Treatment History Management System** is a centralized web application that allows authorized clinic staff and healthcare professionals to manage patient information and quickly access complete treatment histories.
+**CareFlow: Healthcare Clinic Patient and Treatment Management System**
 
-## Main User Flow
+## 2. Problem Statement
 
-Login → Dashboard → Search Patient → Select Patient → View Patient Profile → View Treatment History → View Treatment Record
+Small clinics need a practical way to keep patient details and treatment records together. When this information is difficult to find or is spread across separate records, clinic staff can spend extra time locating a patient's history and maintaining up-to-date records.
 
-The system will also allow authorized users to add new treatment records to a patient's history.
+## 3. Proposed Solution
 
-## Live Deployment
+CareFlow provides a browser-based interface for authorized users to manage patient profiles and treatment records in one application. It includes patient search, treatment history, and patient document attachments, backed by an Express API and MongoDB.
 
-- **Frontend:** [CareFlow on Netlify](https://healthcare-clinic-frontend.netlify.app/)
-- **Backend API:** [CareFlow API on Render](https://s91-bavan-capstone-healthcareclinic-1dx4.onrender.com)
+## 4. Technology Stack
 
-For the Netlify production environment, set `VITE_API_URL` to
-`https://s91-bavan-capstone-healthcareclinic-1dx4.onrender.com` (without a trailing slash).
-The local `client/.env` file is ignored and should not be committed.
+- **Frontend:** React, Vite, JavaScript, and CSS
+- **Backend:** Node.js and Express REST API
+- **Database:** MongoDB with Mongoose
+- **Authentication:** JSON Web Tokens (JWT), password hashing with bcrypt, and optional Google OAuth
+- **AI writing assistance:** Google Gemini through the server-side Google GenAI SDK
+- **Tests:** Vitest for frontend utility tests and Node.js built-in test runner for backend service tests
+- **Containers and web serving:** Docker, Docker Compose, and Nginx
+- **Deployment configuration:** Netlify for the frontend and Render for the backend
 
-## Docker
+## 5. Architecture Overview
 
-Prerequisites: Docker Engine or Docker Desktop with the Compose plugin. The app
-uses the existing MongoDB Atlas database; provide your own Atlas URI and a
-strong JWT secret. Create a root `.env` file (ignored by Git) with:
+The application uses a simple three-part architecture:
 
-```dotenv
-MONGODB_URI=<your MongoDB Atlas URI>
-JWT_SECRET=<your strong random secret>
+```text
+React frontend -> Express REST API -> MongoDB
 ```
 
-`CLIENT_URL` defaults to `http://localhost:8080` and `PORT` is set to `5000`.
-The frontend image builds with an empty `VITE_API_URL`, so API requests use the
-same-origin Nginx proxy.
-Google OAuth is optional; configure `GOOGLE_CLIENT_ID`,
-`GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` in the root `.env` only if
-using Google sign-in. Set the redirect URI to the public frontend origin plus
-`/api/auth/google/callback`.
+The React application calls the API for authentication and clinic records. Express handles requests and reads or writes data in MongoDB through Mongoose. In the Docker setup, Nginx serves the frontend and proxies API and health-check requests to the backend. Uploaded document files are stored by the backend, while their metadata is kept in MongoDB.
 
-AI notes suggestions are optional. Set `GEMINI_API_KEY` in the ignored root
-`.env` for Docker Compose or in `server/.env` for local backend development.
-Compose passes it only to the backend. Suggestions use Gemini 3.5 Flash-Lite and
-send only the clinician-written notes draft; the form requires confirmation
-that it is de-identified. Never include patient names, IDs, diagnoses, or
-medical-record details. Suggestions are drafts and are saved only after they
-are accepted and the treatment form is submitted. The required placeholder is
-documented in `server/.env.example`.
+The backend can also call Gemini for a narrowly scoped writing suggestion. Gemini only suggests wording for clinician-written notes; it does not make diagnoses, treatment recommendations, or other medical decisions. The clinician remains responsible for reviewing and submitting the note.
 
-Build and start both services:
+## 6. Key Implemented Features
+
+- Register and sign in with a username and password; passwords are hashed and successful sign-in returns an expiring JWT.
+- Optional Google sign-in when OAuth credentials are configured.
+- View a patient dashboard and search patients by name, patient ID, phone number, or email.
+- Create, update, and deactivate patient records.
+- View a patient's profile and treatment history.
+- Create, view, and edit treatment records, including diagnosis, treatment plan, medications, notes, date, department, and status.
+- Upload and list patient documents. Supported uploads are PDF, JPEG, PNG, and plain text files up to 10 MB.
+- Request an optional Gemini wording suggestion for a clinician-written notes draft. The user must confirm that the draft is de-identified, and the suggestion is not saved unless the clinician accepts it and submits the treatment form.
+- Health-check endpoint at `/health`.
+
+## 7. Installation Instructions
+
+### Prerequisites
+
+- Node.js and npm
+- MongoDB running locally, or access to a MongoDB deployment
+- Docker Engine or Docker Desktop with the Docker Compose plugin if using the container method
+
+There is no root-level npm package; install dependencies separately in `client` and `server`.
+
+### Install dependencies
+
+From the repository root, install each application's dependencies:
+
+```powershell
+cd server
+npm ci
+cd ..\client
+npm ci
+cd ..
+```
+
+## 8. Environment Setup
+
+The backend loads environment variables from `server/.env` during local development. From the repository root in PowerShell, copy the example file:
+
+```powershell
+Copy-Item .\server\.env.example .\server\.env
+```
+
+Then set values appropriate for your environment. Do not commit `.env` files or share secrets.
+
+| Variable | Purpose |
+| --- | --- |
+| `MONGODB_URI` | MongoDB connection string. The backend has a local MongoDB fallback; Docker Compose requires this variable. |
+| `JWT_SECRET` | Secret used to sign and verify application tokens. Set a strong, private value. Docker Compose requires it. |
+| `PORT` | Backend listening port; defaults to `5000`. |
+| `CLIENT_URL` | Frontend origin used for authentication redirects; defaults to the local Vite origin during backend development. |
+| `GOOGLE_CLIENT_ID` | Optional Google OAuth client ID. |
+| `GOOGLE_CLIENT_SECRET` | Optional Google OAuth client secret. |
+| `GOOGLE_REDIRECT_URI` | Optional OAuth callback URL. Configure it to match the Google OAuth application when Google sign-in is enabled. |
+| `GEMINI_API_KEY` | Optional server-side key for Gemini notes suggestions. |
+| `VITE_API_URL` | Optional frontend API base URL. Vite development uses its configured proxy, so this is not needed for the local development setup below. Set it to the backend origin when building the separately deployed frontend. |
+
+For Docker Compose, create a root `.env` file containing your own `MONGODB_URI` and `JWT_SECRET`. Add the Google OAuth or Gemini variables only if you intend to use those optional integrations. Never put actual credentials in this README or in source control.
+
+Gemini receives only the clinician-written draft submitted for wording assistance. Do not include patient names, IDs, diagnoses, or medical-record details in the draft; the application requires confirmation that it is de-identified.
+
+## 9. Running the Project
+
+### Run locally with npm
+
+First, make sure MongoDB is available and configure `server/.env`. Start the backend and frontend in separate terminals from the repository root.
+
+**Terminal 1 - backend:**
+
+```powershell
+cd server
+npm run dev
+```
+
+**Terminal 2 - frontend:**
+
+```powershell
+cd client
+npm run dev
+```
+
+Open the local URL printed by Vite (typically `http://localhost:5173`). Vite proxies `/api` and `/health` requests to the backend at `http://localhost:5000`.
+
+### Run with Docker Compose
+
+Create the root `.env` file described above, then run from the repository root:
 
 ```sh
-docker compose up --build -d
+docker compose up --build
 ```
 
-Open `http://localhost:8080`. Verify the API through the frontend proxy:
+Open `http://localhost:8080`. To check the services and API health:
 
 ```sh
 docker compose ps
 curl http://localhost:8080/health
 ```
 
-Follow service logs with `docker compose logs -f`; stop the services with
-`docker compose down`. The named `uploads` volume persists uploaded documents
-when the containers stop.
+Stop the containers with `docker compose down`. The Compose configuration uses a named volume for uploaded documents so they persist when containers are recreated.
 
-## Planned Features
+## 10. Testing Instructions
 
-- Secure user login
-- Dashboard with patient-related information
-- Patient search and patient list
-- Patient profile management
-- Treatment history
-- Treatment record details
-- Add new treatment records
-- Empty and error states
-- Simple and easy navigation
+Run the frontend and backend tests from their respective directories:
 
-## Day-by-Day Development Plan
+```sh
+cd client
+npm run test
+```
 
-### Day 1 — Project Setup and UX Planning
-- Create and configure the GitHub repository
-- Set up the project structure
-- Create the Mock UX
-- Define the main user flow and screens
+```sh
+cd server
+npm test
+```
 
-### Day 2 — Frontend Setup
-- Set up the frontend
-- Create the main application layout
-- Implement navigation and dashboard structure
+Additional available checks:
 
-### Day 3 — Patient Management
-- Create patient search and patient list
-- Create patient profile
-- Implement patient information management
+```sh
+# From client/
+npm run lint
+npm run build
 
-### Day 4 — Treatment History
-- Create treatment history interface
-- Display treatment records
-- Create treatment record details
+# From server/
+npm run check
+```
 
-### Day 5 — Add Treatment Records
-- Create the add treatment record form
-- Implement form validation
-- Save and display new treatment records
+The Bruno collection in `bruno/healthcare-clinic-api` is also available for manually exercising API requests.
 
-### Day 6 — Backend and Database Integration
-- Set up backend APIs
-- Connect the application to the database
-- Connect patient and treatment data with the frontend
+## 11. Deployment Links
 
-### Day 7 — Testing and Error Handling
-- Test the main user workflows
-- Handle empty states and error states
-- Fix identified issues
+- **Frontend (Netlify):** [https://healthcare-clinic-frontend.netlify.app/](https://healthcare-clinic-frontend.netlify.app/)
+- **Backend API (Render):** [https://s91-bavan-capstone-healthcareclinic-1dx4.onrender.com](https://s91-bavan-capstone-healthcareclinic-1dx4.onrender.com)
 
-### Day 8 — Final Improvements
-- Improve usability and navigation
-- Review the complete application
-- Fix remaining bugs
+Set `VITE_API_URL` in the Netlify site environment to point to the backend API. Deployment environment variables should be configured in the hosting provider; do not commit their values.
 
-### Day 9 — Final Testing and Documentation
-- Perform final testing
-- Update project documentation
-- Prepare the project demonstration
+## 12. Folder Structure
 
-## Mock UX Design
+```text
+.
+├── bruno/
+│   └── healthcare-clinic-api/   # Bruno API requests and local environment
+├── client/
+│   ├── public/                  # Static assets
+│   └── src/
+│       ├── assets/              # Frontend assets
+│       └── utils/               # Frontend utilities and Vitest tests
+├── server/
+│   ├── src/
+│   │   ├── config/              # Database connection
+│   │   ├── middleware/          # Authentication middleware
+│   │   ├── models/              # Mongoose models
+│   │   └── services/            # Backend services and Node.js tests
+│   └── .env.example             # Backend environment variable template
+├── compose.yaml                 # Docker Compose services and upload volume
+├── netlify.toml                 # Netlify frontend build configuration
+├── render.yaml                  # Render backend service configuration
+└── README.md
+```
 
-The Mock UX represents the planned user interface and main workflows of the application before implementation.
+The `client` and `server` folders each contain their own `package.json`, lockfile, and Dockerfile. The frontend Docker image uses Nginx to serve the built app and proxy API requests.
 
-### Main Screens
+## 13. Future Improvements
 
-1. Login
-2. Dashboard
-3. Patient Search / Patient List
-4. Patient Profile
-5. Treatment History
-6. Treatment Record Details
-7. Add New Treatment Record
+Possible areas for future work, not claims about current functionality:
 
-### Primary Workflow
+- Add automated API and end-to-end tests for complete user workflows.
+- Add role-based permissions and an audit trail for access to sensitive records.
+- Use managed, access-controlled object storage and define document retention and backup policies.
+- Add deployment monitoring and production-specific security and operational checks.
 
-Clinic staff logs in → searches for a patient → selects the patient → views the patient profile → checks the complete treatment history → opens a treatment record when detailed information is required.
+## 14. Contributors
 
-## Repository
-
-This repository contains the development work for the Healthcare Clinic Patient Treatment History Management System.
-
-## Authentication
-
-The server provides username/password registration and login. Passwords are stored as bcrypt hashes, and successful login returns an expiring JWT used to access patient and treatment APIs.
-
-Copy `server/.env.example` to `server/.env` and set `MONGODB_URI`, `PORT`, and a long random `JWT_SECRET` before starting the server.
-
-- `POST /api/auth/register` creates a user with a password of at least 8 characters.
-- `POST /api/auth/login` returns a bearer token.
-- `GET /api/auth/google` starts optional Google OAuth login and returns the same application JWT after callback.
-- Patient and treatment requests require `Authorization: Bearer <token>`.
-
-To enable Google login, create a Google OAuth web application, add `http://localhost:5000/api/auth/google/callback` as an authorized redirect URI, and set the Google variables in `server/.env`.
-
-Authenticated users can upload PDF, JPEG, PNG, and text documents up to 10 MB from a patient profile. Files are stored in `server/uploads/` and document metadata is linked to the patient in MongoDB.
-
-## Deploy the Backend on Render
-
-The root `render.yaml` defines the backend as a Node web service using `server/` as its root directory. In Render, select **New > Blueprint**, connect this repository, and apply the blueprint.
-
-Set these environment variables in the Render service before testing:
-
-- `MONGODB_URI`: a hosted MongoDB connection string, such as MongoDB Atlas.
-- `JWT_SECRET`: a long random signing secret.
-- `CLIENT_URL`: `https://healthcare-clinic-frontend.netlify.app`.
-- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`: optional Google OAuth credentials.
-- `GOOGLE_REDIRECT_URI`: `https://s91-bavan-capstone-healthcareclinic-1dx4.onrender.com/api/auth/google/callback` when Google login is enabled.
-
-Render should report `/health` as healthy after deployment. The deployed API base URL is
-`https://s91-bavan-capstone-healthcareclinic-1dx4.onrender.com`.
-
-## GitHub Repository Setup
-
-- Main branch: `main`
-- Development branch: `feature/repository-setup`
-- Repository visibility: Public
-- README created as part of the initial Capstone repository setup
+Contributor names are not listed here to avoid guessing. See the [repository contributor history on GitHub](https://github.com/bavanGH/S91_Bavan_Capstone_HealthcareClinic/graphs/contributors) for verified contributor information.
